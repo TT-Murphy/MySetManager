@@ -13,7 +13,9 @@ type AppView = "home" | "login" | "dashboard" | "editor" | "demo";
 function AppContent() {
   const { user, isLoading, login } = useAuth();
   const [currentView, setCurrentView] = useState<AppView>("home");
-  const [currentPractice, setCurrentPractice] = useState<SavedPractice | null>(null);
+  const [currentPractice, setCurrentPractice] = useState<SavedPractice | null>(
+    null
+  );
 
   if (isLoading) {
     return (
@@ -69,16 +71,16 @@ function AppContent() {
 
   // Show appropriate view based on current state
   if (currentView === "home") {
-    return <HomePage onNavigateToLogin={handleNavigateToLogin} onTryDemo={handleTryDemo} />;
+    return (
+      <HomePage
+        onNavigateToLogin={handleNavigateToLogin}
+        onTryDemo={handleTryDemo}
+      />
+    );
   }
 
   if (currentView === "login") {
-    return (
-      <Login
-        onLogin={handleLogin}
-        onBackToHome={handleBackToHome}
-      />
-    );
+    return <Login onLogin={handleLogin} onBackToHome={handleBackToHome} />;
   }
 
   if (currentView === "demo") {
@@ -110,7 +112,12 @@ function AppContent() {
   }
 
   // Fallback to home if no user and no specific view
-  return <HomePage onNavigateToLogin={handleNavigateToLogin} onTryDemo={handleTryDemo} />;
+  return (
+    <HomePage
+      onNavigateToLogin={handleNavigateToLogin}
+      onTryDemo={handleTryDemo}
+    />
+  );
 }
 
 export default function Home() {

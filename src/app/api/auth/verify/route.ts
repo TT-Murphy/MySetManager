@@ -13,7 +13,7 @@ const users = [
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "No valid token provided" },
@@ -22,19 +22,16 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    
+
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "demo-secret"
     ) as any;
 
     const user = users.find((u) => u.id === decoded.userId);
-    
+
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
     return NextResponse.json({
@@ -45,9 +42,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Invalid token" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 }

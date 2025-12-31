@@ -9,7 +9,13 @@ import {
 
 export function parseSwimSet(input: string): ParsedSwimSet {
   if (!input || typeof input !== "string") {
-    return { sets: [], totalYardage: 0, estimatedTime: 0, difficulty: 0, comments: [] };
+    return {
+      sets: [],
+      totalYardage: 0,
+      estimatedTime: 0,
+      difficulty: 0,
+      comments: [],
+    };
   }
 
   const lines = input.split("\n").map((line) => line.trim());
@@ -180,14 +186,14 @@ function parseExercise(line: string): Exercise {
 
   let interval = 0;
   if (intervalMatch) {
-    if (intervalMatch[0].includes('minute')) {
+    if (intervalMatch[0].includes("minute")) {
       // Handle "on X minute" format
       const minutes = parseInt(intervalMatch[1]);
       interval = minutes * 60;
     } else {
       // Handle "X:XX" format
       const minutes = parseInt(intervalMatch[2] || intervalMatch[1]);
-      const seconds = parseInt(intervalMatch[3] || intervalMatch[2] || '0');
+      const seconds = parseInt(intervalMatch[3] || intervalMatch[2] || "0");
       interval = minutes * 60 + seconds;
     }
   }
@@ -455,22 +461,25 @@ export function calculateEstimatedTime(parsedSet: ParsedSwimSet): number {
  * Factors: yardage (primary), intervals, intensity keywords
  * Target: 100 = extremely hard practice (10k yards + lots of fast work)
  */
-function calculateDifficulty(parsedSet: ParsedSwimSet, originalText: string): number {
+function calculateDifficulty(
+  parsedSet: ParsedSwimSet,
+  originalText: string
+): number {
   let difficulty = 0;
-  
+
   // Base difficulty from yardage (0-60 points)
   // 10,000 yards = 60 points, scales linearly
   const yardageScore = Math.min(60, (parsedSet.totalYardage / 10000) * 60);
   difficulty += yardageScore;
-  
+
   // Interval difficulty bonus (0-25 points)
   const intervalScore = calculateIntervalDifficulty(parsedSet);
   difficulty += intervalScore;
-  
-  // Intensity keyword bonus (0-15 points) 
+
+  // Intensity keyword bonus (0-15 points)
   const intensityScore = calculateIntensityBonus(originalText);
   difficulty += intensityScore;
-  
+
   // Cap at 100 and round
   return Math.min(100, Math.round(difficulty));
 }
@@ -482,16 +491,16 @@ function calculateDifficulty(parsedSet: ParsedSwimSet, originalText: string): nu
 function calculateIntervalDifficulty(parsedSet: ParsedSwimSet): number {
   let totalIntervalDifficulty = 0;
   let totalYardageWithIntervals = 0;
-  
+
   for (const set of parsedSet.sets) {
     for (const item of set.exercises) {
       if (item.type === "exercise" && item.interval > 0) {
         const intervalDifficulty = getIntervalDifficultyScore(
-          item.distance, 
-          item.stroke, 
+          item.distance,
+          item.stroke,
           item.interval
         );
-        
+
         // Weight by yardage of this exercise
         const exerciseYardage = item.totalYardage * set.multiplier;
         totalIntervalDifficulty += intervalDifficulty * exerciseYardage;
@@ -499,9 +508,9 @@ function calculateIntervalDifficulty(parsedSet: ParsedSwimSet): number {
       }
     }
   }
-  
+
   if (totalYardageWithIntervals === 0) return 0;
-  
+
   // Average difficulty weighted by yardage, scaled to 0-25
   const avgDifficulty = totalIntervalDifficulty / totalYardageWithIntervals;
   return Math.min(25, avgDifficulty * 25);
@@ -511,32 +520,43 @@ function calculateIntervalDifficulty(parsedSet: ParsedSwimSet): number {
  * Score individual interval difficulty
  * Returns 0-1 where 1 = very challenging interval
  */
-function getIntervalDifficultyScore(distance: number, stroke: string, interval: number): number {
+function getIntervalDifficultyScore(
+  distance: number,
+  stroke: string,
+  interval: number
+): number {
   // Define "moderate" intervals (not easy, not crushing)
   const moderateIntervals: { [key: string]: { [distance: number]: number } } = {
-    "Free": { 25: 25, 50: 50, 100: 75, 200: 160, 400: 340, 500: 430 },
-    "Back": { 25: 30, 50: 60, 100: 90, 200: 190, 400: 400 },
-    "Breast": { 25: 35, 50: 70, 100: 110, 200: 230, 400: 480 },
-    "Fly": { 25: 30, 50: 65, 100: 100, 200: 220, 400: 460 },
-    "IM": { 100: 100, 200: 220, 400: 460 }
+    Free: { 25: 25, 50: 50, 100: 75, 200: 160, 400: 340, 500: 430 },
+    Back: { 25: 30, 50: 60, 100: 90, 200: 190, 400: 400 },
+    Breast: { 25: 35, 50: 70, 100: 110, 200: 230, 400: 480 },
+    Fly: { 25: 30, 50: 65, 100: 100, 200: 220, 400: 460 },
+    IM: { 100: 100, 200: 220, 400: 460 },
   };
-  
+
   // Normalize stroke name
-  const normalizedStroke = stroke === "Free" ? "Free" : 
-                          stroke === "Back" ? "Back" :
-                          stroke === "Breast" ? "Breast" :
-                          stroke === "Fly" ? "Fly" :
-                          stroke === "IM" ? "IM" : "Free";
-  
+  const normalizedStroke =
+    stroke === "Free"
+      ? "Free"
+      : stroke === "Back"
+      ? "Back"
+      : stroke === "Breast"
+      ? "Breast"
+      : stroke === "Fly"
+      ? "Fly"
+      : stroke === "IM"
+      ? "IM"
+      : "Free";
+
   const moderateTime = moderateIntervals[normalizedStroke]?.[distance];
   if (!moderateTime) return 0; // Unknown distance/stroke combo
-  
+
   // Calculate ratio: lower interval = higher difficulty
   const ratio = moderateTime / interval;
-  
+
   // Convert to 0-1 scale where:
   // ratio > 1.5 = very hard (score near 1)
-  // ratio = 1.0 = moderate (score = 0.5) 
+  // ratio = 1.0 = moderate (score = 0.5)
   // ratio < 0.8 = easy (score near 0)
   if (ratio >= 1.5) return 1.0;
   if (ratio <= 0.8) return 0.0;
@@ -550,39 +570,60 @@ function getIntervalDifficultyScore(distance: number, stroke: string, interval: 
 function calculateIntensityBonus(text: string): number {
   const lowercaseText = text.toLowerCase();
   let bonus = 0;
-  
+
   // High intensity keywords (3 points each, max 3 occurrences = 9 points)
-  const highIntensityWords = ['sprint', 'fast', 'afap', 'all.{0,5}out', 'race.{0,5}pace', 'max', 'explosive'];
+  const highIntensityWords = [
+    "sprint",
+    "fast",
+    "afap",
+    "all.{0,5}out",
+    "race.{0,5}pace",
+    "max",
+    "explosive",
+  ];
   let highIntensityCount = 0;
-  
+
   for (const word of highIntensityWords) {
-    const regex = new RegExp(word, 'gi');
+    const regex = new RegExp(word, "gi");
     const matches = (lowercaseText.match(regex) || []).length;
     highIntensityCount = Math.min(3, highIntensityCount + matches);
   }
   bonus += highIntensityCount * 3;
-  
+
   // Medium intensity keywords (1.5 points each, max 2 occurrences = 3 points)
-  const mediumIntensityWords = ['pace', 'tempo', 'threshold', 'build', 'neg.{0,5}split', 'descend'];
+  const mediumIntensityWords = [
+    "pace",
+    "tempo",
+    "threshold",
+    "build",
+    "neg.{0,5}split",
+    "descend",
+  ];
   let mediumIntensityCount = 0;
-  
+
   for (const word of mediumIntensityWords) {
-    const regex = new RegExp(word, 'gi');
+    const regex = new RegExp(word, "gi");
     const matches = (lowercaseText.match(regex) || []).length;
     mediumIntensityCount = Math.min(2, mediumIntensityCount + matches);
   }
   bonus += mediumIntensityCount * 1.5;
-  
-  // Challenging sets/formats (2 points each, max 1.5 occurrences = 3 points)  
-  const challengingFormats = ['ladder', 'pyramid', 'broken', 'negative.{0,5}split', 'time.{0,5}trial'];
+
+  // Challenging sets/formats (2 points each, max 1.5 occurrences = 3 points)
+  const challengingFormats = [
+    "ladder",
+    "pyramid",
+    "broken",
+    "negative.{0,5}split",
+    "time.{0,5}trial",
+  ];
   let formatCount = 0;
-  
+
   for (const format of challengingFormats) {
-    const regex = new RegExp(format, 'gi');
+    const regex = new RegExp(format, "gi");
     const matches = (lowercaseText.match(regex) || []).length;
     formatCount = Math.min(1, formatCount + (matches > 0 ? 1 : 0));
   }
   bonus += formatCount * 3;
-  
+
   return Math.min(15, bonus);
 }
